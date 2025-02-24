@@ -1,34 +1,31 @@
-name: Deploy to GitHub Pages
+name: Deploy to Server
 
 on:
   push:
     branches:
-      - main  # Runs the workflow on push to the main branch
-
-  workflow_dispatch:  # Allows manual triggering of the workflow
+      - main  # Trigger the workflow on pushes to the main branch
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest  # Specifies the runner environment
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4  # Fetches the repository code
+      # Step 1: Check out the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      # Step 2: Set up SSH
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.7.0
         with:
-          node-version: '20'  # Specifies Node.js version
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Install dependencies
-        run: npm install
-        continue-on-error: true  # Ignores errors if no package.json exists
+      # Step 3: Copy files to the server using SCP
+      - name: Copy files to server
+        run: |
+          scp -o StrictHostKeyChecking=no -r ./* ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/var/www/my_website/
 
-      - name: Build project (if needed)
-        run: echo "No build step required"  # Modify if needed
-
-      - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          branch: gh-pages  # Deploys to the gh-pages branch
-          folder: .  # Root directory (modify if using a build step)
+      # Step 4: Restart Apache2 (optional)
+      - name: Restart Apache2
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "sudo systemctl restart apache2"
