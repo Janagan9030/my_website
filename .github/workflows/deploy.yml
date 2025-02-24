@@ -24,11 +24,6 @@ jobs:
       - name: Install rsync
         run: sudo apt-get update && sudo apt-get install -y rsync
 
-      # Step 4: Test SSH connection
-      - name: Test SSH connection
-        run: |
-           ssh -o StrictHostKeyChecking=no -p 22 \
-            root@34.235.88.169 "echo 'SSH connection successful!'"
       # Step 5: Copy files to the server using rsync
       - name: Copy files to server
         run: |
