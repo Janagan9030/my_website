@@ -41,3 +41,19 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} \
             ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "sudo systemctl restart apache2"
+      # Step 7: Update Apache2 configuration (optional)
+      - name: Update Apache2 configuration
+        run: |
+          ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} \
+            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "sudo bash -c 'echo \"<VirtualHost *:80>
+              DocumentRoot /var/www/my_website
+              <Directory /var/www/my_website>
+                  Options Indexes FollowSymLinks
+                  AllowOverride None
+                  Require all granted
+              </Directory>
+          </VirtualHost>\" > /etc/apache2/sites-available/my_website.conf'"
+          ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} \
+            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "sudo a2ensite my_website.conf"
+          ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} \
+            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "sudo systemctl reload apache2"
