@@ -24,13 +24,19 @@ jobs:
       - name: Install rsync
         run: sudo apt-get update && sudo apt-get install -y rsync
 
-      # Step 4: Copy files to the server using rsync
+      # Step 4: Test SSH connection
+      - name: Test SSH connection
+        run: |
+          ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} \
+            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "echo 'SSH connection successful!'"
+
+      # Step 5: Copy files to the server using rsync
       - name: Copy files to server
         run: |
           rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }}" \
             ./ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/var/www/my_website/
 
-      # Step 5: Restart Apache2 (optional)
+      # Step 6: Restart Apache2 (optional)
       - name: Restart Apache2
         run: |
           ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} \
