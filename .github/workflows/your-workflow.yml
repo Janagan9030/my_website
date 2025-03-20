@@ -23,9 +23,9 @@ jobs:
       - name: Deploy to Server
         run: |
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            cd /var/www/my-app  # Change to your project folder
+            cd /var/www/my-website  # Change to your project folder
             git pull origin main  # Pull latest changes
             npm install --production  # Install dependencies
-            pm2 restart my-app  # Restart the app (if using PM2)
+            pm2 restart my-website  # Restart the app (if using PM2)
           EOF
 
