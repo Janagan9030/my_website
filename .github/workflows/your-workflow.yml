@@ -3,35 +3,34 @@ name: Deploy to Server
 on:
   push:
     branches:
-      - main  # Fixed indentation issue
+      - main  # Change to your deployment branch
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Set up SSH
-        uses: webfactory/ssh-agent@v0.5.0
+      - name: Checkout the latest commit
+        uses: actions/checkout@v4
         with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fetch-depth: 1  # Only fetch the latest commit, avoids cloning entire history
 
-      - name: Add SSH keyscan
+      - name: Deploy files via rsync
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_PATH: "/var/www/html"  # Change to your deployment directory
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.HOSTNAME }} >> ~/.ssh/known_hosts
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts
 
-      - name: Deployment from main to mca_app
-        if: github.ref == 'refs/heads/main'
-        run: |
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no" --exclude '.gitignore' --exclude '.git' --exclude '.github/' "$GITHUB_WORKSPACE/" ${{ secrets.USERNAME }}@${{ secrets.HOSTNAME }}:${{ secrets.DESTINATION_PATH }} --rsync-path="sudo rsync"
-          ssh -o StrictHostKeyChecking=no ${{ secrets.USERNAME }}@${{ secrets.HOSTNAME }} "sudo chown -R ubuntu:ubuntu ${{ secrets.DESTINATION_PATH }}"
-          ssh -o StrictHostKeyChecking=no ${{ secrets.USERNAME }}@${{ secrets.HOSTNAME }} "sudo chmod -R 777 ${{ secrets.STORAGE_PATH }}"
+          # Rsync files to server (excluding .git directory)
+          rsync -avz --exclude='.git' --delete ./ $SERVER_USER@$SERVER_IP:$SERVER_PATH
 
-      - name: Deployment from main branch to stage
-        if: github.ref == 'refs/heads/main'
+      - name: Restart Server (Optional)
         run: |
-          rsync -avz -e "ssh -o StrictHostKeyChecking=no" --exclude '.gitignore' --exclude '.git' --exclude '.github/' "$GITHUB_WORKSPACE/" ${{ secrets.USERNAME }}@${{ secrets.HOSTNAME }}:${{ secrets.STAGE_DESTINATION_PATH }} --rsync-path="sudo rsync"
-          ssh -o StrictHostKeyChecking=no ${{ secrets.USERNAME }}@${{ secrets.HOSTNAME }} "sudo chown -R ubuntu:ubuntu ${{ secrets.STAGE_DESTINATION_PATH }}"
-          ssh -o StrictHostKeyChecking=no ${{ secrets.USERNAME }}@${{ secrets.HOSTNAME }} "sudo chmod -R 777 ${{ secrets.STAGE_STORAGE_PATH }}"
+          ssh $SERVER_USER@$SERVER_IP "sudo systemctl restart apache2"  # Adjust for your web server
