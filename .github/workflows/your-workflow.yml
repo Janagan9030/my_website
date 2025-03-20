@@ -1,36 +1,10 @@
-name: Deploy to Server
-
-on:
-  push:
-    branches:
-      - main  # Change to your deployment branch
-  workflow_dispatch:
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout the latest commit
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1  # Only fetch the latest commit, avoids cloning entire history
-
-      - name: Deploy files via rsync
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-          SERVER_IP: ${{ secrets.SERVER_IP }}
-          SERVER_PATH: "/var/www/html"  # Change to your deployment directory
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts
-
-          # Rsync files to server (excluding .git directory)
-          rsync -avz --exclude='.git' --delete ./ $SERVER_USER@$SERVER_IP:$SERVER_PATH
-
-      - name: Restart Server (Optional)
-        run: |
-          ssh $SERVER_USER@$SERVER_IP "sudo systemctl restart apache2"  # Adjust for your web server
+- name: Setup SSH and Add Host Key
+  env:
+    SERVER_IP: ${{ secrets.SERVER_IP }}
+    SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+  run: |
+    mkdir -p ~/.ssh
+    echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+    chmod 600 ~/.ssh/id_rsa
+    ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts || echo "SSH Keyscan failed!"
+    cat ~/.ssh/known_hosts  # Debug known_hosts
